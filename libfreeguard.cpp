@@ -71,10 +71,15 @@ extern "C" int freeguard_libc_start_main(main_fn_t main_fn, int argc, char** arg
 	asm volatile("movl %%ebp,%0\n"
 								"movl %%esp,%1\n"
 								: "=r"(ebp), "=r"(esp)::"memory");
-#else
+#elif defined(X86_64BIT)
 	asm volatile("movq %%rbp,%0\n"
 							"movq %%rsp, %1\n"
 							: "=r"(ebp), "=r"(esp)::"memory");
+
+#else 
+    asm volatile("mov %0, x29\n"    // Read frame pointer into ebp (x29 is the frame pointer)
+                 "mov %1, sp\n"     // Read stack pointer into esp
+                 : "=r"(ebp), "=r"(esp)::"memory");       
 #endif
 	// copy stack data
 	ebpOffset = stackTop - ebp;
@@ -86,10 +91,14 @@ extern "C" int freeguard_libc_start_main(main_fn_t main_fn, int argc, char** arg
 	asm volatile("movl %0, %%ebp\n"
 								"movl %1, %%esp\n"
 								:: "r"(customizedEbp), "r"(customizedEsp):"memory");
-#else
+#elif defined(X86_64BIT)
 	asm volatile("movq %0,%%rbp\n"
 								"movq %1,%%rsp\n"
 								:: "r"(customizedEbp), "r"(customizedEsp):"memory");
+#else
+        asm volatile("mov x29, %0\n"    // Set base pointer (frame pointer)
+                      "mov sp, %1\n"    // Set stack pointer
+                      :: "r"(customizedEbp), "r"(customizedEsp):"memory");       
 #endif
 	// re-direct arguments
 	argv = (char**)(newStackTop - (stackTop - (intptr_t)argv));
